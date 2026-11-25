@@ -54,6 +54,62 @@ Run the audio and translation-boundary tests without downloading a model:
 .venv/bin/python -m unittest -v test_media_audio
 ```
 
+## Optional Runpod GPU backend
+
+Local transcription remains the default. To rent a temporary Runpod Secure Cloud
+GPU for one invocation:
+
+```bash
+.venv/bin/python media_scribe.py --video recording.mkv \
+  --backend runpod --runpod-token-file /secure/path/runpod-token
+```
+
+The same backend flags work with the existing Plex command. Plex lookup and
+uploads stay local; only audio, transcription code, and allowlisted settings go
+to the Pod. No Plex, Hugging Face, or Runpod token is sent to it. Original-language
+and English outputs retain the local naming and subtitle formatting behaviour.
+Existing stdin/URL inputs are supported after local download/spooling.
+
+Requirements: local `ffmpeg`, OpenSSH (`ssh`, `scp`, `ssh-keygen`), outbound HTTPS
+and SSH, a funded Runpod account, and a restricted API key with GraphQL
+Read/Write permission. Use a root/user-only token file, or `RUNPOD_API_KEY`.
+Tokens are never passed as command-line arguments. Do not commit credentials.
+No Runpod SDK or local CUDA installation is required. The remote worker suppresses
+only the Hugging Face anonymous-download notice; actual rate-limit and download
+warnings remain visible. Downloads remain anonymous and subject to anonymous limits.
+
+Defaults and safeguards:
+
+- `--runpod-gpu "NVIDIA GeForce RTX 4090"`: one on-demand Secure Cloud GPU.
+- `--runpod-max-hourly-rate 2`: reject unavailable/excessive quotes and terminate
+  an allocation whose returned total hourly rate exceeds this USD limit.
+- `--runpod-max-seconds 3600`: allocation deadline covering provisioning,
+  transfers, dependency/model downloads, and inference. Increase explicitly for
+  longer jobs. Audio extraction runs before allocation with the same timeout.
+- Model, compute type, language, VAD and subtitle settings are preserved;
+  device is forced to CUDA. Only named faster-whisper models are supported,
+  not local model paths or arbitrary model repositories.
+- `--diarize` is rejected in Runpod mode because it would need a separate
+  design for gated models and credential handling. Use the local backend.
+- Failure never silently falls back to local execution. Normal cleanup
+  terminates the Pod; a separate local watchdog attempts termination at the
+  deadline even if the invoking CLI is interrupted. Cleanup retries API failures.
+
+**These are not guaranteed dollar caps.** If this machine goes down or Runpod's
+API is unavailable, the watchdog cannot guarantee termination. The Pod ID is
+printed immediately: check the Runpod console and terminate it manually if
+cleanup fails. An ambiguous allocation API timeout may also require checking the
+console for a newly created `media-scribe` Pod. Temporary disk is billed while
+running; no persistent volumes are created. Runpod currently charges no Pod
+network ingress/egress fee. Compute prices and availability vary.
+
+A reference benchmark of one hour of Croatian audio, using `medium`/`int8`,
+produced Croatian and English outputs in about four minutes of command runtime
+and seven minutes overall on an RTX 4090. Successful-run compute cost was about
+$0.10 at $0.89/hour; this is an observation, not a performance or price guarantee.
+The optional cloud backend uploads recordings to a third party: use it only
+where permitted by your data-handling requirements.
+
 ## Hugging Face Token
 
 Diarization requires a Hugging Face token and access to the pyannote diarization
@@ -316,6 +372,22 @@ Use CUDA only if the NVIDIA driver and CUDA runtime are compatible on the
 machine.
 
 ## Batch Subtitling
+
+To select one video interactively with `fzf` and subtitle it using Runpod:
+
+```bash
+./subtitle.sh --pick                  # recursively search /media
+./subtitle.sh --pick /media/downloads # optionally narrow the search
+```
+
+Install `fzf` locally first. This mode selects one video, preserves unusual
+filenames, and uses `--backend runpod --runpod-token-file runpod-token` with the
+existing `medium`/`int8` defaults and Runpod cost/time safeguards described above.
+The token file is resolved in the script directory. Plex checks and uploads are
+unchanged, including skipping items with uploaded English subtitles; `PLEX_URL`
+still overrides the server. Cancelling the picker performs no transcription or
+cloud allocation. A failed directory traversal aborts rather than presenting an
+incomplete list. Existing regex modes remain local by default.
 
 Pass a quoted full-path extended regular expression to `subtitle.sh`:
 

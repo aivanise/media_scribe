@@ -156,6 +156,8 @@ def parse_args() -> argparse.Namespace:
         default="stdin.mkv",
         help="Filename to use for stdin input outputs. Defaults to stdin.mkv.",
     )
+    from runpod_backend import add_arguments
+    add_arguments(parser)
     parser.add_argument(
         "--model",
         default="medium",
@@ -1339,6 +1341,10 @@ def transcribe(
     output_dir: Path,
     args: argparse.Namespace,
 ) -> None:
+    if getattr(args, "backend", "local") == "runpod":
+        from runpod_backend import transcribe as transcribe_runpod
+        transcribe_runpod(media_input, source_path, output_dir, args)
+        return
     speaker_turns = None
     speaker_map = None
     if args.diarize:
