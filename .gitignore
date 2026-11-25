@@ -19,6 +19,7 @@ __pycache__/
 cookies.txt
 hf_token.txt
 hf-token
+runpod-token
 # The Plex owner token grants server access and must never enter version control.
 /plex-token
 .env
