@@ -1,0 +1,7 @@
+# Keep the inference API stable while the application owns audio decoding.
+faster-whisper==1.2.1
+# PyAV 19 is supported through array input, bypassing faster-whisper's old decoder.
+av>=19.0.2,<20
+numpy>=1.26,<3
+# Keep Plex upload API changes behind an explicit major-version review.
+PlexAPI>=4.18.3,<5

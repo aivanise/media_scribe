@@ -1,0 +1,24 @@
+.google-drive-token.json
+.venv/
+.gitdir/
+.agents/
+.codex/
+__pycache__/
+*.py[cod]
+*.wav
+*.mp3
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.srt
+*.vtt
+*.json
+*.txt
+!requirements*.txt
+cookies.txt
+hf_token.txt
+hf-token
+# The Plex owner token grants server access and must never enter version control.
+/plex-token
+.env
